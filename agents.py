@@ -162,7 +162,7 @@ class QPlayer(game.Player):
             file_path = "qtable.pkl"
         env = pacman.Env(self.state)
         episode_count = 1
-        
+        ghost = game.Ghost_red(self.state) # create ghost for proper gamestates
         while True:
             for e in pacman.pygame.event.get():
                 if e.type==pacman.pygame.QUIT: 
@@ -180,7 +180,19 @@ class QPlayer(game.Player):
             
             env.msg_from_agent = f"Episode: {episode_count}/{episodes}"
 
-            #your code here 
+            #your code here
+            if self.state.game_over() and episode_count < episodes: # if game over, BUT more episodes, increment episode count and reset gamestate
+                episode_count += 1
+                self.state.reset()
+                continue
+            elif not self.state.game_over(): # if game is  not over
+                initialState = self.state.get_state_id() 
+                newDir = self.get_dir_epolicy()
+                self.state.move_pac(newDir) #these 3 lines update state
+                if not self.state.game_over(): self.state.move_ghost(ghost.get_dir()) # only move ghost if game isnt over, can screw with points otherwise
+                newState = self.state.get_state_id() 
+                reward = self.state.reward()
+                self.update(initialState, newDir, newState, reward) #update in table
 
             # Draw            
             if self.state.game_over() and episode_count >= episodes:
@@ -195,7 +207,7 @@ class QPlayer(game.Player):
           Load the Q-table from a file
         """
         if file_path is None: # default to this to avoid crash
-            return
+            file_path = "qtable.pkl"
         with open(file_path, "rb") as f:
             self.q_table_id = pickle.load(f)
         
