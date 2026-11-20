@@ -7,6 +7,10 @@ import pacman
 import sys
 import random
 from collections import defaultdict
+import pickle
+
+def defaultDictFunc():
+    return {d: 0.0 for d in pacman.DIRS}
 
 class Human(game.Player):
     def __init__(self, state):
@@ -52,7 +56,7 @@ class QPlayer(game.Player):
         self.epsilon = epsilon
         self.alpha = alpha
         self.discount = gamma
-        self.q_table_id = defaultdict(lambda: {d: 0.0 for d in pacman.DIRS})
+        self.q_table_id = defaultdict(defaultDictFunc) # set up q table, func here is at the top
         
 
     def get_QValue(self, state_id, dir):
@@ -70,7 +74,7 @@ class QPlayer(game.Player):
           there are no legal dirs, which is the case at the
           terminal state, you should return a value of 0.0.
         """
-        available_dir = self.state.get_available_dirs(self.state.pac) # get available dirs
+        available_dir = self.state.get_available_dirs(pacman.Loc(state_id[0], state_id[1])) # get available dirs
         if len(available_dir) == 0: # if no choices return 0.0
             return 0.0
         val = self.get_QValue(state_id, available_dir[0]) # set first value
@@ -85,7 +89,17 @@ class QPlayer(game.Player):
           are no legal dirs, which is the case at the terminal state,
           you should return None.
         """
-        pass
+        available_dir = self.state.get_available_dirs(pacman.Loc(state_id[0], state_id[1])) # get available dirs
+        if len(available_dir) == 0: # if no choices return 0.0
+            return None
+        bestDir = available_dir[0] # set first dir
+        bestVal = self.get_QValue(state_id, bestDir) # set first dir's qval
+        for i in range(len(available_dir)-1): # loop over remaining values
+            temp = self.get_QValue(state_id, available_dir[1+i])
+            if temp > bestVal: # if new qval is >
+                bestVal = temp # save value if Q value is larger
+                bestDir = available_dir[1+i] # save dir if qval is >
+        return bestDir
     
     def get_dir_epolicy(self):
         """
@@ -109,12 +123,21 @@ class QPlayer(game.Player):
                 if e.key==pacman.pygame.K_ESCAPE: sys.exit()
         
         #your code here
+        state_id = self.state.get_state_id() # get state id
+        available_dir = self.state.get_available_dirs(self.state.pac)
+        
+        if len(available_dir) == 0: return None
+        elif random.random() < self.epsilon: # random from 0 to 1 is less than the epsilon, return a random move
+            return random.choice(available_dir)
+        else:
+            return self.compute_dir_from_QValues(state_id) # generate dir from Q values
 
     def update(self, state_id, dir, nextState_id, reward):
         """
           You should do your Q-Value update here
         """
-        pass
+        # 𝑄(𝑆, 𝐴) ← (1 − 𝛼)𝑄(𝑆, 𝐴) + 𝛼[𝑅 + 𝛾 max𝐴′𝑄(𝑆′, 𝐴′)]
+        self.q_table_id[state_id][dir] = (1 - self.alpha) * self.get_QValue(state_id, dir) + self.alpha * (reward + self.discount * self.compute_value_from_QValues(nextState_id))
 
     def print_q_table(self):
         """
@@ -126,7 +149,8 @@ class QPlayer(game.Player):
         """
           Save the Q-table to a file
         """
-        pass
+        with open(file_path, "wb") as f: # saving to file
+            pickle.dump(self.q_table_id, f)
 
     def learn_episodes(self, episodes = None, file_path = None):
         if episodes is None:
@@ -169,8 +193,10 @@ class QPlayer(game.Player):
         """
           Load the Q-table from a file
         """
-        pass
-        
+        if file_path is None: # default to this to avoid crash
+            return
+        with open(file_path, "rb") as f:
+            self.q_table_id = pickle.load(f)
         
     def get_dir(self):
         if not self.q_table_id:
