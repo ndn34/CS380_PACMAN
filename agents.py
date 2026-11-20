@@ -143,7 +143,8 @@ class QPlayer(game.Player):
         """
           Print the Q-table
         """
-        pass
+        for state_id, val in self.q_table_id.items():
+            print("State:(" + f"{state_id[0]}, {state_id[1]}, {state_id[2]}, {state_id[3]})" + f" UP: {round(val[pacman.UP], 2)} DOWN: {round(val[pacman.DOWN], 2)} LEFT: {round(val[pacman.LEFT], 2)} RIGHT: {round(val[pacman.RIGHT], 2)}")
 
     def save_q_table(self, file_path):
         """
