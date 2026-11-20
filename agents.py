@@ -207,7 +207,7 @@ class QPlayer(game.Player):
           Load the Q-table from a file
         """
         if file_path is None: # default to this to avoid crash
-            file_path = "qtable.pkl"
+            file_path = "qtable.pk1"
         with open(file_path, "rb") as f:
             self.q_table_id = pickle.load(f)
         
